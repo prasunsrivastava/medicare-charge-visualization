@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<head>
+    <title>Hospital Charge</title>
+    <link rel="stylesheet" href="css/style.css" type="text/css" media="screen" />
+</head>
+<body>
+<div id="main-wrapper">
+
+    <h1>How much do hospitals charge for medical procedures</h1>
+
+    <div class="instruction">
+    <p class="intro"> 
+    The map below represents around 2900 hospitals which support medicare. The hospitals which have an overall medicare cost
+    greater than the national average medicare cost are coloured in red whereas the ones with the overall medicare cost lower
+    than the national average are coloured green. Please click on a hospital to view the top-25 DRG(Diagnosis Related Group)
+    by the total number of cases per hospital.The left chart presents a comparison with the national average for that DRG 
+    and the right chart presents a comparison with the state average for that DRG. When the average cost is greater than the 
+    national and state average, it is coloured brown. </br> Data Source: CMS Medicare Charge Data 2014
+    </p>
+    </div>
+    <div class="map-area"></div>
+    <div id="tooltip" class="tooltip">
+        <h3 class="name"></h3>
+        <h4 class="overall-cost-factor"></h4>
+        <div class="line">
+            National Average Cost
+            <div class="map-national-avg"></div>
+        </div>
+        <div class="line">
+            Average Medicare Cost
+            <div class="hospital-avg"></div>
+        </div>
+    </div>
+    <div class="bar-chart-area">
+    <h2 class="bar-area-header"></h2>
+     <div class="row">
+          <div id="chart1">
+            <div id="tooltip-chart1" class="tooltip">
+                <h3 class="name"></h3>
+                <div class="line">
+                    National Average Cost
+                    <div class="national-average-cost"></div>
+                </div>
+                <div class="line">
+                    Average Medicare Cost
+                    <div class="average-cost"></div>
+                </div>
+            </div>
+        </div>
+        <div id="chart2">
+            <div id="tooltip-chart2" class="tooltip">
+                <h3 class="name"></h3>
+                <div class="line">
+                    State Average Cost
+                    <div class="state-average-cost"></div>
+                </div>
+                <div class="line">
+                    Average Medicare Cost
+                    <div class="average-cost"></div>
+                </div>
+            </div>
+        </div>
+     </div>
+    </div>
+    
+</div><!-- @end #main-wrapper -->
+
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/queue.v1.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+
+<script>
+var width = 960,
+    height = 600,
+    center = [width / 2, height / 2],
+    defaultFill = "#e0e0e0";
+    
+var AvgByProviderID = d3.map();
+
+var projection = d3.geo.albersUsa()
+    .scale(1280)
+    .translate([width / 2, height / 2]);
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var svg = d3.select(".map-area").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+var g = svg.append("g");
+
+var tooltip = d3.select("#tooltip")
+ .attr("class", "tooltip")
+ .style("opacity", 0);
+
+var margin = {top: 20, bottom: 20, left: 340, right: 20},
+            height_chart = 600 - margin.top - margin.bottom,
+            width_chart1 = 660 - margin.right - margin.left,
+            width_chart2 = 300;
+      
+
+var natAvgTooltip = d3.select("#tooltip-chart1")
+                      .attr("class", "tooltip")
+                      .style("opacity", 0);
+
+var stateAvgTooltip = d3.select("#tooltip-chart2")
+                        .attr("class", "tooltip")
+                        .style("opacity", 0);
+
+var chart1 = d3.select("#chart1")
+                .append("svg")
+                .attr("width", width_chart1 + margin.left + margin.bottom)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate("+ margin.left + "," + margin.top + ")")
+
+var chart2 = d3.select("#chart2")
+                .append("svg")
+                .attr("width", width_chart2)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(0, " + margin.top + ")")
+
+var x1 = d3.scale.linear()
+                 .range([0, width_chart1])
+
+var x2 = d3.scale.linear()
+                 .range([0, width_chart2])
+
+var y = d3.scale.ordinal()
+                .rangeBands([0, height_chart], 0.2)
+
+var x1Axis = d3.svg.axis()
+                  .scale(x1)
+                  .orient("bottom")
+
+var x2Axis = d3.svg.axis()
+                  .scale(x2)
+                  .orient("bottom")
+
+var yAxis = d3.svg.axis()
+                  .scale(y)
+                  .orient("left")
+                  .tickSize(0)
+// Load data
+queue()
+    .defer(d3.json, "data/us.json")
+    .defer(d3.csv, "data/provider_overall_avg_v2.csv")
+    .defer(d3.csv, "data/top25_drg_hospital_v1.csv")
+    .await(ready);
+
+// After loading the data...
+function ready(error, us, charge, top25drg) {
+    
+    // Country borders
+    g.append("g")
+        .attr("class", "counties")
+        .selectAll("path")
+          .data(topojson.feature(us, us.objects.counties).features)
+        .enter().append("path")
+          .attr("d", path)
+
+    // State borders
+    g.append("path")
+        .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+        .attr("class", "states")
+        .attr("d", path);
+    
+    svg.append("g")
+       .selectAll("circle")
+       .data(charge)
+       .enter()
+       .append("circle")
+       .attr("class", "circles")
+       .attr("cx", function(d){ return projection([+d.lon, +d.lat])[0]; })
+       .attr("cy", function(d){ return projection([+d.lon, +d.lat])[1]; })
+       .attr("r", 3)
+       .attr("fill", function(d){
+
+        if(d.national_cost_factor > 1)
+            { return "red       "; }
+        else
+            { return "#2ca25f"; };
+
+       })
+       .attr("fill-opacity", 0.5)
+       .on("mouseover", function(d){
+        
+        d3.select(this).classed("selected", true);
+        tooltip.transition().duration(100)
+                   .style("opacity", 1)
+        if (d3.event.pageX > (width - 200)) {
+                     tooltip.style("left", (d3.event.pageX - 210) + "px");
+                 } else {
+                     tooltip.style("left", (d3.event.pageX + 20) + "px")
+                          .style("top", (d3.event.pageY -30) + "px");
+                 }
+                 if (d3.event.pageY > (height - 150)) {
+                     tooltip.style("top", (d3.event.pageY -140) + "px");
+                 } else {
+                     tooltip.style("top", (d3.event.pageY -30) + "px");
+                 }
+        tooltip.select(".name").text(d.Provider_Name)
+        tooltip.select(".overall-cost-factor").text(d.national_cost_factor + "x times the national average")
+        tooltip.select(".map-national-avg").text(d.overall_nat_avg_covered_charges)
+        tooltip.select(".hospital-avg").text(d.avg_covered_charges)
+       })
+       .on("mouseout", function() {
+                d3.select(this).classed("selected", false);
+                tooltip.transition().duration(300)
+                  .style("opacity", 0);
+         })
+       .on("click", function(d){ draw(d, top25drg); }) 
+
+   }
+
+function draw(hsptl, data){
+
+            myData = data.filter(function(element){ return element.Provider_ID == hsptl.Provider_ID; });
+
+            x1.domain([0, d3.max(myData, function(d){ return d.National_Cost_Factor })])
+
+            x2.domain([0, d3.max(myData, function(d){ return d.State_Cost_Factor })])
+
+            y.domain(myData.map(function(d){ return d.DRG_Definition; }))
+
+            d3.select(".bar-area-header").text("Top 25 DRG for " + hsptl.Provider_Name)
+
+            chart1.select(".y.axis").remove()
+
+            chart1.append("g")
+                  .attr("class", "y axis")
+                  .call(yAxis);
+
+            chart1.select(".x.axis").remove()
+
+            chart1.append("g")
+                  .attr("class", "x axis")
+                  .attr("transform", "translate(0, " + (height) + ")")
+                  .call(x1Axis);
+
+            chart2.select(".x.axis").remove()
+            
+            chart2.append("g")
+                  .attr("class", "x axis")
+                  .attr("transform", "translate(0, " + (height) + ")")
+                  .call(x2Axis);
+
+            var chart1Bar = chart1.selectAll("rect")
+                           .data(myData);
+    
+            // new data     
+            chart1Bar.enter()
+                 .append("rect")
+                 .attr("x", 0)
+                 .attr("y", function(d){ return y(d.DRG_Definition); })
+                 .attr("width", function(d){ return x1(d.National_Cost_Factor); })
+                 .attr("height", y.rangeBand())
+                 .style("fill", function(d){
+                if(d.National_Cost_Factor > 1){ return "brown"; }
+                else{ return "steelblue"; }
+               });
+            
+            // update data
+            chart1Bar.transition()
+                 .duration(1000)
+                 .attr("x", 0)
+                 .attr("y", function(d){ return y(d.DRG_Definition); })
+                 .attr("width", function(d){ return x1(d.National_Cost_Factor); })
+                 .attr("height", y.rangeBand())
+                 .style("fill", function(d){
+                if(d.National_Cost_Factor > 1){ return "brown"; }
+                else{ return "steelblue"; }
+               });
+
+            chart1Bar.exit()
+                    .remove();
+
+            chart1Bar.on("mouseover", function(d){ 
+                d3.select(this).classed("selected", true);
+                natAvgTooltip.transition().duration(100)
+                             .style("opacity", 0.9)
+                if (d3.event.pageX > (width_chart1 - 200)) {
+                             natAvgTooltip.style("left", (d3.event.pageX - 210) + "px");
+                         } else {
+                             natAvgTooltip.style("left", (d3.event.pageX + 20) + "px")
+                                  .style("top", (d3.event.pageY -30) + "px");
+                         }
+                         if (d3.event.pageY > (height - 150)) {
+                             natAvgTooltip.style("top", (d3.event.pageY -140) + "px");
+                         } else {
+                             natAvgTooltip.style("top", (d3.event.pageY -30) + "px");
+                         }
+                natAvgTooltip.select(".name").text(d.National_Cost_Factor + "x times the national average")
+                natAvgTooltip.select(".national-average-cost").text(d.National_Average_Covered_Charges)
+                natAvgTooltip.select(".average-cost").text(d.Average_Covered_Charges)
+                // natAvgTooltip.select(".line-1").select(".val").text(d.national_cost_factor)
+            })
+            .on("mouseout", function() {
+                d3.select(this).classed("selected", false);
+                natAvgTooltip.transition().duration(300)
+                       .style("opacity", 0);
+         })
+              
+            var chart2Bar = chart2.selectAll("rect")
+                                  .data(myData);
+
+            // new data
+            chart2Bar.enter()
+                 .append("rect")
+                 .attr("x", 0)
+                 .attr("y", function(d){ return y(d.DRG_Definition); })
+                 .attr("width", function(d){ return x2(d.State_Cost_Factor); })
+                 .attr("height", y.rangeBand())
+                 .style("fill", function(d){
+                if(d.State_Cost_Factor > 1){ return "brown"; }
+                else{ return "steelblue"; }
+               });
+
+            // update data
+            chart2Bar.transition()
+                 .duration(1000)
+                 .attr("x", 0)
+                 .attr("y", function(d){ return y(d.DRG_Definition); })
+                 .attr("width", function(d){ return x2(d.State_Cost_Factor); })
+                 .attr("height", y.rangeBand())
+                 .style("fill", function(d){
+                if(d.State_Cost_Factor > 1){ return "brown"; }
+                else{ return "steelblue"; }
+               });
+
+            // remove non-existent bars
+            chart2Bar.exit()
+                     .remove();
+            
+            chart2Bar.on("mouseover", function(d){ 
+                d3.select(this).classed("selected", true);
+                stateAvgTooltip.transition().duration(100)
+                             .style("opacity", 0.9)
+                if (d3.event.pageX > (width_chart2 - 200)) {
+                             stateAvgTooltip.style("left", (d3.event.pageX - 210) + "px");
+                         } else {
+                             stateAvgTooltip.style("left", (d3.event.pageX + 20) + "px")
+                                  .style("top", (d3.event.pageY -30) + "px");
+                         }
+                         if (d3.event.pageY > (height - 150)) {
+                             stateAvgTooltip.style("top", (d3.event.pageY -140) + "px");
+                         } else {
+                             stateAvgTooltip.style("top", (d3.event.pageY -30) + "px");
+                         }
+                stateAvgTooltip.select(".name").text(d.State_Cost_Factor + "x times the state average")
+                stateAvgTooltip.select(".state-average-cost").text(d.State_Average_Covered_Charges)
+                stateAvgTooltip.select(".average-cost").text(d.Average_Covered_Charges)
+                // natAvgTooltip.select(".line-1").select(".val").text(d.national_cost_factor)
+            })
+            .on("mouseout", function() {
+                d3.select(this).classed("selected", false);
+                stateAvgTooltip.transition().duration(300)
+                       .style("opacity", 0);
+         })
+
+        }
+
+</script>
+</body>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>What Hospitals Charge</title>
+	<style type="text/css">
+    body{
+        font-size: 10px;
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+    }
+			
+    h1 {
+        
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+        color: purple;
+        text-transform: capitalize;
+    }
+
+    .instruction{
+
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+        font-size: 11px;
+        width: 250px;
+        font-style: italic;
+        text-align: justify;
+        font-weight: bold;
+
+
+    }
+
+    #hospital-name{
+
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+
+    }
+
+	.axis path,
+	.axis line {
+	  fill: none;
+	  stroke: #000;
+	  shape-rendering: crispEdges;
+	}
+
+	.y.axis path {
+	  display: none;
+	}
+
+	.y.axis text{
+
+		text-align: left;
+	}
+
+	
+	</style>
+</head>
+<body>
+
+<h1>How much do hospitals charge for medical procedures</h1>
+
+<div class="instruction">
+<p class="intro"> 
+Below, we present top-5 DRG(Diagnosis Related Group) by total number of cases per hospital. Please select
+a hospital from the drop down menu below to display its data.
+</p>
+</div>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<!-- <script src="d3.js"></script> -->
+
+<script type="text/javascript">
+	
+	var margin = {left: 100, right: 20 , top: 20, bottom: 30},
+	    height = 600 - margin.top - margin.bottom,
+	    width = 800 - margin.right - margin.left;
+
+	var hospital_ID = 50763;
+
+	var cols = ["Average_Covered_Charges", "National_Average_Covered_Charges"];
+
+	var body = d3.select("body");
+
+	var select = body.append("div")
+                     .append("select")
+                     .attr("id", "hospital-name");
+
+
+	var svg = body.append("svg")
+	              .attr("height", height + margin.top + margin.bottom)
+	              .attr("width", width + margin.right + margin.left)
+	              .append("g")
+	              .attr("transform", "translate(" + margin.left + ", " + margin.top + ")");
+
+	var color = d3.scale.ordinal()
+	                    .domain(cols)
+	                    .range(["#66c2a5", "#8da0cb"])
+
+	var xScale = d3.scale.linear()
+	                     .range([0, width]);
+
+	var yScale0 = d3.scale.ordinal()
+	                      .rangeBands([0, height], 0.2);
+
+	var yScale1 = d3.scale.ordinal();
+
+	var xAxis = d3.svg.axis()
+	                  .scale(xScale)
+	                  .orient("bottom");
+
+	var yAxis0 = d3.svg.axis()
+	                   .scale(yScale0)
+	                   .orient("left")
+	                   .tickSize(0);
+
+	var insertLinebreaks = function (t, d, width) {
+    var el = d3.select(t);
+    var p = d3.select(t.parentNode);
+    p.append("foreignObject")
+        .attr('x', -margin.left)
+        .attr('y', -20)
+        .attr("width", margin.left-2)
+        .attr("height", width)
+      .append("xhtml:p")
+        .attr('style','word-wrap: break-word; text-align:center;')
+        .html(d);    
+
+    el.remove();
+
+};
+    
+    function draw(data){
+
+        data.forEach(function(d){
+            d.cost = cols.map(function(name){ return {name: name, value: +d[name] }; });
+        });
+
+        xScale.domain([0, d3.max(data, function(d){ return d3.max(d.cost, function(d){ return d.value; }); })]);
+
+        yScale0.domain(data.map(function(d){ return d.DRG_Definition; }));
+
+        yScale1.domain(cols)
+               .rangeBands([0, yScale0.rangeBand()], 0.01);
+
+        svg.select(".x.axis").remove();
+
+        svg.append("g")
+           .attr("class", "x axis")
+           .attr("transform", "translate(0, " + (height) + ")")
+           .call(xAxis);
+
+        svg.select(".y.axis").remove();
+
+        svg.append("g")
+           .attr("class","y axis")
+           .call(yAxis0);
+        
+        d3.select('.y.axis')
+          .selectAll('text')
+          .each(function(d, i){ insertLinebreaks(this, d, yScale1.rangeBand()*2); });
+
+        var drg = svg.selectAll(".drg")
+                     .data(data);
+
+        //new data
+        drg.enter()
+           .append("g")
+           .attr("class", "drg")
+           .attr("transform", function(d){ return "translate(0, " + yScale0(d.DRG_Definition) + ")"; });
+
+        // update drg positions on Y axis
+        drg.attr("transform", function(d){ return "translate(0, " + yScale0(d.DRG_Definition) + ")"; });
+
+        //removed data
+        drg.exit()
+           .remove();
+
+
+        var rect = drg.selectAll("rect")
+                      .data(function(d){ return d.cost; });
+
+        
+        // new bars   
+        rect.enter()
+            .append("rect")
+            .attr("y", function(d){ return yScale1(d.name); })
+            .attr("height", yScale1.rangeBand())
+            .attr("width", function(d){ return xScale(d.value); })
+            .attr("x", 0)
+            .style("fill", function(d){ return color(d.name); });
+        
+        // update bars
+        rect.transition()
+            .duration(750)
+            .attr("width", function(d){ return xScale(d.value); })
+            .attr("height", yScale1.rangeBand())
+            .attr("y", function(d){ return yScale1(d.name); })
+            .attr("x", 0)
+            .style("fill", function(d){ return color(d.name); });
+
+        // remove non-existent bars
+        rect.exit()
+            .remove();
+
+        
+        var legend =  d3.select("svg")
+                        .selectAll(".legend")
+                        .data(cols.slice().reverse())
+                        .enter().append("g")
+                        .attr("class", "legend")
+                        .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+          
+          
+          legend.append("rect")
+              .attr("x", width - 18)
+              .attr("width", 18)
+              .attr("height", 18)
+              .style("fill", color);
+
+          legend.append("text")
+              .attr("x", width - 24)
+              .attr("y", 9)
+              .attr("dy", ".35em")
+              .style("text-anchor", "end")
+              .text(function(d) { return d; });
+
+
+    };
+
+
+	d3.csv("data/FY2014_top_5_DRG_by_Provider.csv", function(error, data){
+
+		select.selectAll("option")
+              .data(data)
+              .enter()
+              .append("option")
+              .attr("value", function(d){ return d.Provider_ID; })
+              .text(function (d){ return d.Provider_Name; })
+
+        select.on("change", function(){
+
+            var hospital_id = d3.select(this).property("value");
+            myData = data.filter(function(element){ return element.Provider_ID == hospital_id; });
+            draw(myData);
+        })
+
+	});
+
+</script>
+
+</body>
+</html>

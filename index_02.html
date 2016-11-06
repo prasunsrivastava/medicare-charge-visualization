@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head>
+	<title>Hospital Charge</title>
+</head>
+<style type="text/css">
+	body{
+        font-size: 10px;
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+    }
+			
+    h1 {
+        
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+        color: purple;
+        text-transform: capitalize;
+    }
+
+    .instruction{
+
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+        font-size: 11px;
+        width: 500px;
+        font-style: italic;
+        text-align: justify;
+        font-weight: bold;
+
+
+    }
+
+    #hospital-name{
+
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+
+    }
+
+    .row{
+    	font-size: 8px;
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+    }
+
+    #chart1{
+		float: left;
+		width: 660px;
+		margin: 10px;
+		font-family: Arial;
+	}
+
+	#chart2{
+		float: left;
+		width:300px;
+		margin: 10px;
+	}
+
+	div.tooltip {
+    position: absolute;
+    text-align: left;
+    width: 250px;
+    padding: 10px;
+    font-size: 10px;
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+    background: #ffffff;
+    pointer-events: none;
+    opacity: 0;
+}
+
+div.tooltip .line { clear: both; margin-top: 3px; font-size: 11px; }
+div.tooltip .state-average-cost { float: right; width: 50px; height: 6px; margin: 3px 4px 0 0; }
+div.tooltip .average-cost { float: right; width: 50px; height: 6px; margin: 3px 4px 0 0; }
+div.tooltip .national-average-cost { float: right; width: 50px; height: 6px; margin: 3px 4px 0 0; }
+
+    .axis path,
+	.axis line {
+	  fill: none;
+	  stroke: #000;
+	  shape-rendering: crispEdges;
+	}
+
+	.y.axis path {
+	  display: none;
+	}
+
+	.y.axis text{
+
+		text-align: left;
+	}
+</style>
+<body>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+	<h1>How much do hospitals charge for medical procedures</h1>
+
+	<div class="instruction">
+	<p class="intro"> 
+	Below, we present top-25 DRG(Diagnosis Related Group) by total number of cases per hospital. Please select
+	a hospital from the drop down menu below to display its data. The left chart presents a comparison with the
+	national average for that DRG and the right chart presents a comparison with the state average for that DRG.
+	When the average cost is greater than the national and state average, it is coloured brown.
+	</p>
+	</div>
+	<div>
+		<select id="hospital-name"></select>
+	</div>
+	<div class="row">
+		<div id="chart1">
+			<div id="tooltip-chart1" class="tooltip">
+				<h3 class="name"></h3>
+				<div class="line">
+					National Average Cost
+					<div class="national-average-cost"></div>
+				</div>
+				<div class="line">
+					Average Medicare Cost
+					<div class="average-cost"></div>
+				</div>
+			</div>
+		</div>
+		<div id="chart2">
+			<div id="tooltip-chart2" class="tooltip">
+				<h3 class="name"></h3>
+				<div class="line">
+					State Average Cost
+					<div class="state-average-cost"></div>
+				</div>
+				<div class="line">
+					Average Medicare Cost
+					<div class="average-cost"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<script>
+		
+
+		var margin = {top: 20, bottom: 20, left: 340, right: 20},
+		    height = 600 - margin.top - margin.bottom,
+		    width_chart1 = 660 - margin.right - margin.left;
+		    width_chart2 = 300
+
+		// var body = d3.select("body");
+
+		var select = d3.select("#hospital-name");
+
+		var natAvgTooltip = d3.select("#tooltip-chart1")
+		                      .attr("class", "tooltip")
+		                      .style("opacity", 0);
+
+		var stateAvgTooltip = d3.select("#tooltip-chart2")
+		                        .attr("class", "tooltip")
+		                        .style("opacity", 0);
+
+		chart1 = d3.select("#chart1")
+		        .append("svg")
+		        .attr("width", width_chart1 + margin.left + margin.bottom)
+		        .attr("height", height + margin.top + margin.bottom)
+		        .append("g")
+		        .attr("transform", "translate("+ margin.left + "," + margin.top + ")")
+
+		chart2 = d3.select("#chart2")
+		        .append("svg")
+		        .attr("width", width_chart2)
+		        .attr("height", height + margin.top + margin.bottom)
+		        .append("g")
+		        .attr("transform", "translate(0, " + margin.top + ")")
+
+		var x1 = d3.scale.linear()
+		                 .range([0, width_chart1])
+
+		var x2 = d3.scale.linear()
+		                 .range([0, width_chart2])
+
+		var y = d3.scale.ordinal()
+		                .rangeBands([0, height], 0.2)
+
+		var x1Axis = d3.svg.axis()
+		                  .scale(x1)
+		                  .orient("bottom")
+
+		var x2Axis = d3.svg.axis()
+		                  .scale(x2)
+		                  .orient("bottom")
+
+		var yAxis = d3.svg.axis()
+		                  .scale(y)
+		                  .orient("left")
+		                  .tickSize(0)
+
+		function draw(myData){
+
+			x1.domain([0, d3.max(myData, function(d){ return d.National_Cost_Factor })])
+
+			x2.domain([0, d3.max(myData, function(d){ return d.State_Cost_Factor })])
+
+			y.domain(myData.map(function(d){ return d.DRG_Definition; }))
+
+			
+			chart1.select(".y.axis").remove()
+
+			chart1.append("g")
+			      .attr("class", "y axis")
+			      .call(yAxis);
+
+			chart1.select(".x.axis").remove()
+
+			chart1.append("g")
+			      .attr("class", "x axis")
+			      .attr("transform", "translate(0, " + (height) + ")")
+			      .call(x1Axis);
+
+			chart2.select(".x.axis").remove()
+			
+			chart2.append("g")
+			      .attr("class", "x axis")
+			      .attr("transform", "translate(0, " + (height) + ")")
+			      .call(x2Axis);
+
+			var chart1Bar = chart1.selectAll("rect")
+                           .data(myData);
+    
+		    // new data     
+		    chart1Bar.enter()
+		         .append("rect")
+		         .attr("x", 0)
+		         .attr("y", function(d){ return y(d.DRG_Definition); })
+		         .attr("width", function(d){ return x1(d.National_Cost_Factor); })
+		         .attr("height", y.rangeBand())
+		         .style("fill", function(d){
+			   	if(d.National_Cost_Factor > 1){ return "brown"; }
+			   	else{ return "steelblue"; }
+			   });
+		    
+		    // update data
+		    chart1Bar.transition()
+		         .duration(1000)
+		         .attr("x", 0)
+		         .attr("y", function(d){ return y(d.DRG_Definition); })
+		         .attr("width", function(d){ return x1(d.National_Cost_Factor); })
+		         .attr("height", y.rangeBand())
+		         .style("fill", function(d){
+			   	if(d.National_Cost_Factor > 1){ return "brown"; }
+			   	else{ return "steelblue"; }
+			   });
+
+		    chart1Bar.exit()
+		            .remove();
+
+		    chart1Bar.on("mouseover", function(d){ 
+		    	d3.select(this).classed("selected", true);
+		        natAvgTooltip.transition().duration(100)
+			                 .style("opacity", 0.9)
+		        if (d3.event.pageX > (width_chart1 - 200)) {
+		                     natAvgTooltip.style("left", (d3.event.pageX - 210) + "px");
+		                 } else {
+		                     natAvgTooltip.style("left", (d3.event.pageX + 20) + "px")
+		                          .style("top", (d3.event.pageY -30) + "px");
+		                 }
+		                 if (d3.event.pageY > (height - 150)) {
+		                     natAvgTooltip.style("top", (d3.event.pageY -140) + "px");
+		                 } else {
+		                     natAvgTooltip.style("top", (d3.event.pageY -30) + "px");
+		                 }
+		        natAvgTooltip.select(".name").text(d.National_Cost_Factor + "x times the national average")
+		        natAvgTooltip.select(".national-average-cost").text(d.National_Average_Covered_Charges)
+		        natAvgTooltip.select(".average-cost").text(d.Average_Covered_Charges)
+		    })
+		    .on("mouseout", function() {
+                d3.select(this).classed("selected", false);
+                natAvgTooltip.transition().duration(300)
+		               .style("opacity", 0);
+         })
+		      
+		    var chart2Bar = chart2.selectAll("rect")
+		                          .data(myData);
+
+		    // new data
+		    chart2Bar.enter()
+		         .append("rect")
+		         .attr("x", 0)
+		         .attr("y", function(d){ return y(d.DRG_Definition); })
+		         .attr("width", function(d){ return x2(d.State_Cost_Factor); })
+		         .attr("height", y.rangeBand())
+		         .style("fill", function(d){
+			   	if(d.State_Cost_Factor > 1){ return "brown"; }
+			   	else{ return "steelblue"; }
+			   });
+
+		    // update data
+		    chart2Bar.transition()
+		         .duration(1000)
+		         .attr("x", 0)
+		         .attr("y", function(d){ return y(d.DRG_Definition); })
+		         .attr("width", function(d){ return x2(d.State_Cost_Factor); })
+		         .attr("height", y.rangeBand())
+		         .style("fill", function(d){
+			   	if(d.State_Cost_Factor > 1){ return "brown"; }
+			   	else{ return "steelblue"; }
+			   });
+
+		    // remove non-existent bars
+		    chart2Bar.exit()
+		             .remove();
+			
+			chart2Bar.on("mouseover", function(d){ 
+		    	d3.select(this).classed("selected", true);
+		        stateAvgTooltip.transition().duration(100)
+			                 .style("opacity", 0.9)
+		        if (d3.event.pageX > (width_chart2 - 200)) {
+		                     stateAvgTooltip.style("left", (d3.event.pageX - 210) + "px");
+		                 } else {
+		                     stateAvgTooltip.style("left", (d3.event.pageX + 20) + "px")
+		                          .style("top", (d3.event.pageY -30) + "px");
+		                 }
+		                 if (d3.event.pageY > (height - 150)) {
+		                     stateAvgTooltip.style("top", (d3.event.pageY -140) + "px");
+		                 } else {
+		                     stateAvgTooltip.style("top", (d3.event.pageY -30) + "px");
+		                 }
+		        stateAvgTooltip.select(".name").text(d.State_Cost_Factor + "x times the state average")
+		        stateAvgTooltip.select(".state-average-cost").text(d.State_Average_Covered_Charges)
+		        stateAvgTooltip.select(".average-cost").text(d.Average_Covered_Charges)
+		        // natAvgTooltip.select(".line-1").select(".val").text(d.national_cost_factor)
+		    })
+		    .on("mouseout", function() {
+                d3.select(this).classed("selected", false);
+                stateAvgTooltip.transition().duration(300)
+		               .style("opacity", 0);
+         })
+
+		}
+
+		d3.csv("data/top25_drg_hospital_v1.csv", function(error, data){
+
+			var uniqueHospitals = [],
+			    uniqueProviderID = [],
+			    uniqueProviderName = [];
+
+			for(var i= 0; i < data.length; i++){
+				if(uniqueProviderID.indexOf(data[i].Provider_ID) == -1){
+					uniqueProviderID.push(data[i].Provider_ID);
+					uniqueProviderName.push(data[i].Provider_Name);
+				}else{
+					continue;
+				};
+			};
+
+			for(var i = 0; i < uniqueProviderID.length; i++){
+				item = {
+						 Provider_ID: uniqueProviderID[i],
+						 Provider_Name: uniqueProviderName[i]
+				        };
+				uniqueHospitals.push(item);
+			};
+
+            
+			select.selectAll("option")
+              .data(uniqueHospitals)
+              .enter()
+              .append("option")
+              .attr("value", function(d){ return d.Provider_ID; })
+              .text(function (d){ return d.Provider_Name; })
+
+        select.on("change", function(){
+
+            var hospital_id = d3.select(this).property("value");
+            myData = data.filter(function(element){ return element.Provider_ID == hospital_id; });
+            draw(myData);
+        })
+
+		})
+
+	</script>
+</body>
+</html>
