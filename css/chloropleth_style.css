@@ -1,0 +1,103 @@
+/* Normalize */
+/*body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5, h6, pre, form, fieldset, input, p, blockquote, th, td, legend {
+	margin: 0;
+	padding: 0;
+}
+h1,h2,h3,h4,h5,h6 { font-family: Arial, Helvetica, sans-serif; font-weight: bold; font-size: 100%; }
+address, caption, cite, code, dfn, th, var { font-style: normal; font-weight: normal; }
+table { border-collapse: collapse; border-spacing: 0; }
+fieldset,img { border: 0; }
+caption,th { text-align: left; }
+/* @end */*/
+
+#main-wrapper {
+    width: 960px;
+    margin: 0 auto;
+    /*padding: 0;*/
+}
+
+.map-area {
+  width: 960px;
+  margin: 0 auto;
+}
+
+body{
+        font-size: 10px;
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+    }
+      
+h1 {
+        
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+        color: purple;
+        text-transform: capitalize;
+        /*width: 520px;
+        margin: 0 auto;*/
+    }
+
+.instruction {
+        
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+        font-size: 11px;
+        width: 500px;
+        /*margin: 0 auto;*/
+        font-style: italic;
+        text-align: justify;
+        font-weight: bold;
+
+
+    }
+
+.row {
+      font-size: 8px;
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+    }
+
+div.tooltip {
+    position: absolute;
+    text-align: left;
+    width: 150px;
+    padding: 10px;
+    font-size: 10px;
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+    background: #ffffff;
+    pointer-events: none;
+    opacity: 0;
+}
+
+div.tooltip .line { clear: both; margin-top: 3px; font-size: 11px; }
+div.tooltip .map-state-avg { float: right; width: 20px; height: 6px; margin: 3px 4px 0 0; }
+
+.axis path,
+  .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+  }
+
+  .y.axis path {
+    display: none;
+  }
+
+  .y.axis text{
+
+    text-align: left;
+  }
+  
+.overlay {
+  fill: none;
+  pointer-events: all;
+}
+.button { fill: #000; }
+
+.states {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
+}
+
+.states path.selected {
+    stroke: #000;
+    stroke-width: 1px;
+}
