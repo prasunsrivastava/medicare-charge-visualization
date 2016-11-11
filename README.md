@@ -63,6 +63,10 @@ state on the map of the Unites States.
 * Is there a way we can display this information to find if particular states or areas are more expensive than the national average?
 * Some hospitals have fewer than 25 DRGs displayed. (__No resolution for this as some hospitals contain data for less than 25 DRGs__)
 
+#### Round 3
+
+* The story that is being conveyed is 
+
 ### Resources
 
 * [Medicare Provider Utilization and Payment Data](https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/index.html)

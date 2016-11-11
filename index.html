@@ -67,6 +67,7 @@ var tooltip = d3.select("#tooltip")
  .attr("class", "tooltip")
  .style("opacity", 0);
 
+// define a linear color scale
 var color = d3.scale.linear()
               .range(["#ffffff", "#bc80bd"])
               .interpolate(d3.interpolateLab);
@@ -77,6 +78,7 @@ queue()
     .defer(d3.csv, "data/state_avg_v1.csv", changeDataType)
     .await(ready);
 
+// chnage fro string to numeric values
 function changeDataType(d){
 
     d.State_Total_Discharges = +d.State_Total_Discharges;

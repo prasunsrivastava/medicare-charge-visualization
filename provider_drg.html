@@ -109,15 +109,17 @@ var margin = {top: 20, bottom: 20, left: 340, right: 20},
             width_chart1 = 660 - margin.right - margin.left,
             width_chart2 = 300;
       
-
+// tooltip for national comparison bar chart
 var natAvgTooltip = d3.select("#tooltip-chart1")
                       .attr("class", "tooltip")
                       .style("opacity", 0);
 
+// tooltip for state comparison bar chart
 var stateAvgTooltip = d3.select("#tooltip-chart2")
                         .attr("class", "tooltip")
                         .style("opacity", 0);
 
+// create svg for bar chart of national comparison
 var chart1 = d3.select("#chart1")
                 .append("svg")
                 .attr("width", width_chart1 + margin.left + margin.bottom)
@@ -125,6 +127,7 @@ var chart1 = d3.select("#chart1")
                 .append("g")
                 .attr("transform", "translate("+ margin.left + "," + margin.top + ")")
 
+// create svg for bar chart of state comparison
 var chart2 = d3.select("#chart2")
                 .append("svg")
                 .attr("width", width_chart2)
@@ -132,12 +135,15 @@ var chart2 = d3.select("#chart2")
                 .append("g")
                 .attr("transform", "translate(0, " + margin.top + ")")
 
+// define linear scale for national comparison bar chart x-axis
 var x1 = d3.scale.linear()
                  .range([0, width_chart1])
 
+// define linear scale for state comparison bar chart x-axis
 var x2 = d3.scale.linear()
                  .range([0, width_chart2])
 
+// define linear scale for y-axis
 var y = d3.scale.ordinal()
                 .rangeBands([0, height_chart], 0.2)
 
@@ -177,6 +183,7 @@ function ready(error, us, charge, top25drg) {
         .attr("class", "states")
         .attr("d", path);
     
+    // append hospitals on the map
     svg.append("g")
        .selectAll("circle")
        .data(charge)
@@ -196,7 +203,7 @@ function ready(error, us, charge, top25drg) {
        })
        .attr("fill-opacity", 0.5)
        .on("mouseover", function(d){
-        
+        // add mouseover tooltip to the points rendered on map
         d3.select(this).classed("selected", true);
         tooltip.transition().duration(100)
                    .style("opacity", 1)
@@ -227,6 +234,7 @@ function ready(error, us, charge, top25drg) {
 
 function draw(hsptl, data){
 
+            // filter data for single provider
             myData = data.filter(function(element){ return element.Provider_ID == hsptl.Provider_ID; });
 
             x1.domain([0, d3.max(myData, function(d){ return d.National_Cost_Factor })])
@@ -235,6 +243,7 @@ function draw(hsptl, data){
 
             y.domain(myData.map(function(d){ return d.DRG_Definition; }))
 
+            // create title for bar chart area
             d3.select(".bar-area-header").text("Top 25 DRG for " + hsptl.Provider_Name)
 
             chart1.select(".y.axis").remove()
@@ -284,9 +293,11 @@ function draw(hsptl, data){
                 else{ return "steelblue"; }
                });
 
+            // remove non-existent bars
             chart1Bar.exit()
                     .remove();
 
+            // add mouseover tooltip to national comparison bar chart
             chart1Bar.on("mouseover", function(d){ 
                 d3.select(this).classed("selected", true);
                 natAvgTooltip.transition().duration(100)
@@ -344,6 +355,7 @@ function draw(hsptl, data){
             chart2Bar.exit()
                      .remove();
             
+            // add mouseover tooltip to bar chart for state comparison data
             chart2Bar.on("mouseover", function(d){ 
                 d3.select(this).classed("selected", true);
                 stateAvgTooltip.transition().duration(100)
