@@ -65,7 +65,8 @@ state on the map of the Unites States.
 
 #### Round 3
 
-* The story that is being conveyed is 
+* The story being conveyed in the visualization is not clear. The visualization appears to be an exploratory one.
+* The current version of the map isn't color-blind friendly, take a look at how it perceived by color blind people. It is hard to see any difference at all.
 
 ### Resources
 
